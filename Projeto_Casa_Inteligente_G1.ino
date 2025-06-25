@@ -9,8 +9,8 @@ const char* mqtt_server = "???";//endereço do broker público
 const int mqtt_port = 1883;//porta do broker público, geralmente 1883
 
 //Tópicos
-const char* topic_led = "escolainteligente/lab19/luzsala";
-const char* topic_porta = "escolainteligente/lab19/porta";
+const char* topic_led = "inovahome_tech/sala/luz";
+const char* topic_porta = "inovahome_tech/sala/porta";
 
 // Pinos do sensor ultrassônico
 const int trigPin = 5;
@@ -103,46 +103,6 @@ void tratarMensagem(char* topic, byte* payload, unsigned int length) {//
   }
 }
 
-
-void setup() {
-  Serial.begin(115200);
-
-  // Configura os pinos
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-  pinMode(ledPin, OUTPUT);
-  pinMode(rele, OUTPUT);
-
-  // Inicia o servo
-  motor.attach(servoMotor);
-  motor.write(90); // posição inicial = fechada
-
-  // Tranca a porta inicialmente
-  digitalWrite(rele, LOW); // relé desligado = trancado
-
-  Serial.println("Aguardando calibracao dos sensores...");
-  delay(5000);
-  Serial.println("Sistema iniciado.");
-}
-
-void loop() {
-  distanciaCm = DetectarMovimentoComUltrassonico();
-
-  if (distanciaCm > 0 && distanciaCm <= distanciaLimite) {
-    if (!portaAberta) {
-      AbrirPorta();
-      portaAberta = true;
-    }
-  } else {
-    if (portaAberta) {
-      FecharPorta();
-      portaAberta = false;
-    }
-  }
-
-  delay(500); // Pequeno atraso para evitar leituras muito rápidas
-}
-
 float DetectarMovimentoComUltrassonico() {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -187,3 +147,52 @@ void TrancarPorta() {
   digitalWrite(rele, LOW); // desenergiza o relé (trava)
   Serial.println("Porta trancada");
 }
+
+void setup() {
+  Serial.begin(115200);
+
+  // Configura os pinos
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+  pinMode(rele, OUTPUT);
+
+  // Inicia o servo
+  motor.attach(servoMotor);
+  motor.write(90); // posição inicial = fechada
+
+  // Tranca a porta inicialmente
+  digitalWrite(rele, LOW); // relé desligado = trancado
+
+  conectarWiFi();//conecta no wifi
+  client.setServer(mqtt_server, mqtt_port);//conecta no broker server
+  client.setCallback(tratarMensagem);//trata as mensagens recebidas do broker
+
+
+  Serial.println("Aguardando calibracao dos sensores...");
+  delay(5000);
+  Serial.println("Sistema iniciado.");
+}
+
+void loop() {
+
+ if (!client.connected()) reconectarMQTT();//se não tem conexão com o broker, tenta reconectar
+  client.loop(); //mantém a conexão com o broker serve sempre aberta
+
+  distanciaCm = DetectarMovimentoComUltrassonico();
+
+  if (distanciaCm > 0 && distanciaCm <= distanciaLimite) {
+    if (!portaAberta) {
+      AbrirPorta();
+      portaAberta = true;
+    }
+  } else {
+    if (portaAberta) {
+      FecharPorta();
+      portaAberta = false;
+    }
+  }
+
+  delay(500); // Pequeno atraso para evitar leituras muito rápidas
+}
+
