@@ -3,9 +3,9 @@
 #include <PubSubClient.h>
 
 // --- WiFi & MQTT ---
-const char* ssid = "ProjetosIoT_Esp32";//sua rede wifi
-const char* password = "Sen@i134";//senha da sua rede wifi
-const char* mqtt_server = "172.16.39.118";//endereço do broker público
+const char* ssid = "???";//sua rede wifi
+const char* password = "???";//senha da sua rede wifi
+const char* mqtt_server = "???";//endereço do broker público
 const int mqtt_port = 1883;//porta do broker público, geralmente 1883
 
 //Tópicos
