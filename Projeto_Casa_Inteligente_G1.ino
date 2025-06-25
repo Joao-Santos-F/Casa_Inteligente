@@ -3,10 +3,10 @@
 #include <PubSubClient.h>
 
 // --- WiFi & MQTT ---
-const char* ssid = "???";//sua rede wifi
-const char* password = "???";//senha da sua rede wifi
-const char* mqtt_server = "???";//endereço do broker público
-const int mqtt_port = 1883;//porta do broker público, geralmente 1883
+const char* ssid = "ProjetosIoT_Esp32";     //sua rede wifi
+const char* password = "Sen@i134";          //senha da sua rede wifi
+const char* mqtt_server = "172.16.39.118";  //endereço do broker público
+const int mqtt_port = 1883;                 //porta do broker público, geralmente 1883
 
 //Tópicos
 const char* topic_led = "inovahome_tech/sala/luz";
@@ -15,7 +15,7 @@ const char* topic_porta = "inovahome_tech/sala/porta";
 // Pinos do sensor ultrassônico
 const int trigPin = 5;
 const int echoPin = 18;
-const int distanciaLimite = 30; // Distância em cm para ativar o sistema
+const int distanciaLimite = 10;  // Distância em cm para ativar o sistema
 
 // Pino do LED
 const int ledPin = 2;
@@ -37,7 +37,7 @@ PubSubClient client(espClient);
 Servo motor;
 
 // --- Funções WiFi e MQTT ---
-void conectarWiFi() {//verifica conexão wifi para somente depois iniciar o sistema
+void conectarWiFi() {  //verifica conexão wifi para somente depois iniciar o sistema
   Serial.println("Conectando ao WiFi...");
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -47,13 +47,16 @@ void conectarWiFi() {//verifica conexão wifi para somente depois iniciar o sist
   Serial.println("\nWiFi conectado!");
 }
 
-void reconectarMQTT() {//verifica e reconecta a conexão com o broker mqtt
+void reconectarMQTT() {  //verifica e reconecta a conexão com o broker mqtt
   while (!client.connected()) {
     Serial.print("Reconectando MQTT...");
-    if (client.connect("ESP32ClientTest")) {
+    //gera um id único para o esp32 na rede
+    String clientId = "ESP32Client-";
+    clientId += String(WiFi.macAddress());
+    if (client.connect(clientId.c_str())) {  //converte a string C++ em char modelo C
       Serial.println("Conectado!");
-      client.subscribe(topic_led);//conecta ao topico do led assim que estabelecer ligação com o broker
-      client.subscribe(topic_porta);//conecta ao topico da porta assim que estabelecer ligação com o broker
+      client.subscribe(topic_led);    //conecta ao topico do led assim que estabelecer ligação com o broker
+      client.subscribe(topic_porta);  //conecta ao topico da porta assim que estabelecer ligação com o broker
     } else {
       Serial.print("Falha: ");
       Serial.println(client.state());
@@ -68,29 +71,29 @@ void reconectarMQTT() {//verifica e reconecta a conexão com o broker mqtt
   char* é uma cadeia de caracteres em C como um vetor onde cada caractter/letra está em uma posição, 
   diferente de uma String em C++ que pode ser lida completamente
 */
-void tratarMensagem(char* topic, byte* payload, unsigned int length) {//
+void tratarMensagem(char* topic, byte* payload, unsigned int length) {  //
   String mensagem = "";
-  for (int i = 0; i < length; i++) {//concatena todas os char* para se ter o texto completo em String
+  for (int i = 0; i < length; i++) {  //concatena todas os char* para se ter o texto completo em String
     mensagem += (char)payload[i];
   }
 
   Serial.printf("Mensagem recebida [%s]: %s\n", topic, mensagem.c_str());
-  
+
   //led - luz da sala
-  if (strcmp(topic, topic_led) == 0) {//tópico atual é o do led?
+  if (strcmp(topic, topic_led) == 0) {  //tópico atual é o do led?
     if (mensagem == "ligar") {
       digitalWrite(ledPin, HIGH);
     } else if (mensagem == "desligar") {
       digitalWrite(ledPin, LOW);
     }
   }
-  
+
   /*
     Verifica se o tópico recebido é o topico da porta
   é uma função da linguagem C que compara duas strings (topic e topic_porta)
   */
   //porta
-  if (strcmp(topic, topic_porta) == 0) {//tópico atual é o da porta?
+  if (strcmp(topic, topic_porta) == 0) {  //tópico atual é o da porta?
     if (mensagem == "abrir") {
       DestrancarPorta();
       delay(500);
@@ -126,25 +129,25 @@ void AbrirPorta() {
   //digitalWrite(ledPin, HIGH);
   DestrancarPorta();
   delay(1000);
-  motor.write(0); // abre
+  motor.write(0);  // abre
 }
 
 void FecharPorta() {
   Serial.println("Pessoa ausente. Fechando porta.");
 
   //digitalWrite(ledPin, LOW);
-  motor.write(90); // fecha
+  motor.write(90);  // fecha
   delay(1000);
   TrancarPorta();
 }
 
 void DestrancarPorta() {
-  digitalWrite(rele, HIGH); // energiza o relé (destrava)
+  digitalWrite(rele, HIGH);  // energiza o relé (destrava)
   Serial.println("Porta destrancada");
 }
 
 void TrancarPorta() {
-  digitalWrite(rele, LOW); // desenergiza o relé (trava)
+  digitalWrite(rele, LOW);  // desenergiza o relé (trava)
   Serial.println("Porta trancada");
 }
 
@@ -159,14 +162,14 @@ void setup() {
 
   // Inicia o servo
   motor.attach(servoMotor);
-  motor.write(90); // posição inicial = fechada
+  motor.write(90);  // posição inicial = fechada
 
   // Tranca a porta inicialmente
-  digitalWrite(rele, LOW); // relé desligado = trancado
+  digitalWrite(rele, LOW);  // relé desligado = trancado
 
-  conectarWiFi();//conecta no wifi
-  client.setServer(mqtt_server, mqtt_port);//conecta no broker server
-  client.setCallback(tratarMensagem);//trata as mensagens recebidas do broker
+  conectarWiFi();                            //conecta no wifi
+  client.setServer(mqtt_server, mqtt_port);  //conecta no broker server
+  client.setCallback(tratarMensagem);        //trata as mensagens recebidas do broker
 
 
   Serial.println("Aguardando calibracao dos sensores...");
@@ -176,8 +179,8 @@ void setup() {
 
 void loop() {
 
- if (!client.connected()) reconectarMQTT();//se não tem conexão com o broker, tenta reconectar
-  client.loop(); //mantém a conexão com o broker serve sempre aberta
+  if (!client.connected()) reconectarMQTT();  //se não tem conexão com o broker, tenta reconectar
+  client.loop();                              //mantém a conexão com o broker serve sempre aberta
 
   distanciaCm = DetectarMovimentoComUltrassonico();
 
@@ -193,6 +196,5 @@ void loop() {
     }
   }
 
-  delay(500); // Pequeno atraso para evitar leituras muito rápidas
+  delay(500);  // Pequeno atraso para evitar leituras muito rápidas
 }
-
